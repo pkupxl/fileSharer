@@ -2,24 +2,30 @@
     <div>
         <div class="ui fluid card">
             <div class="content">
-                <div class="header"> {{ post.title }}</div>
+                <div class="header"> {{ value.title }}</div>
             </div>
             <div class="content">
-                <p>{{ post.content }}</p>
+                <p>{{ value.content }}</p>
             </div>
             <div class="ui bottom attached buttons">
-                <div class="ui button">comment</div>
+                <div class="ui button" id="commentBtn">comment</div>
                 <div class="ui button">like</div>
             </div>
-            <div class="ui card" v-for="comment in post.comments" :key="comment.id">
-                <div class="content">
-                    {{ comment.user }}
-                </div>
-                <div class="content">
-                    {{ comment.content }}
-                </div>
+            <div class="ui custom popup bottom left transition hidden" id="insertComment">
+                <!-- <input type="text" name="" id=""> -->
+                <textarea class="ui textarea" cols="30" rows="10" v-model="commentContent"></textarea>
+                <!-- <br/> -->
+                <button class="ui right floated primary button" @click="uploadComment">发送</button>
             </div>
             <!-- <div class="ui card"></div> -->
+        </div>
+        <div class="ui fluid card" v-for="comment in value.comments" :key="comment.id">
+            <div class="content">
+                <span>{{ comment.user }}</span>
+            </div>
+            <div class="content">
+                {{ comment.content }}
+            </div>
         </div>
     </div>
 </template>
@@ -29,8 +35,35 @@ export default {
     props: ['value'],
     data() {
         return {
-            post: this.value
+            commentContent: ''
         }
+    },
+    methods: {
+        uploadComment: function() {
+            // $('#commentBtn').popup({
+            //     popup: $('#insertComment'),
+            //     on : 'click'
+            // })
+            $('#commentBtn').popup('hide')
+            var self = this
+            // this.$ajax({
+            //     method: 'post',
+            //     url: 'api/uploadComment',
+            //     data: {
+            //         username: this.username,
+            //         content: this.commentContent
+            //     },
+            //     timeout: 3000
+            // }).then(function(response) {
+
+            // })
+        }
+    },
+    mounted() {
+        $('#commentBtn').popup({
+                popup: $('#insertComment'),
+                on : 'click'
+        })
     }
 }
 </script>

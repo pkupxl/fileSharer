@@ -7,8 +7,8 @@
             </a>
             <div class="item">
                     <div class="ui icon input" id = "searchinfo">
-                        <input type="text" placeholder="搜索...">
-                        <i class="search link icon"></i>
+                        <input type="text" placeholder="搜索..." v-model="searchinfo"/>
+                        <i class="search link icon" @click="search"></i>
                     </div>
             </div>
             <div class="right menu" :style="loginInputs">
@@ -81,12 +81,12 @@
             <!-- </div> -->
         </div>
         <div class="eight wide column" :style="singlePost">
-            <showingPost :value="thePost"></showingPost>
+            <showingPost :value="thePost" :getUsername="username"></showingPost>
         </div>
         <div class="four wide column"></div>
         <div class="ui small modal" id="regModal">
             <div class="content">
-                <login></login>
+                <login v-on:close="closeLogin" ></login>
             </div>
         </div>
 
@@ -144,6 +144,7 @@
                 passwordError: "",
                 loginInputs: "display:none;",
                 loginStatus: "",
+                searchinfo: "",
                 dataList: [],
                 mainList: "",
                 singlePost: "display: none;",
@@ -160,6 +161,9 @@
             }
         },
         methods: {
+            getUsername: function() {
+                return this.username;
+            },
             deepcopy: function (oldObj) {
                 var newObj;
                 var strObj = JSON.stringify(oldObj);
@@ -196,6 +200,17 @@
                     
                 })
             },
+            search: function(){
+                let self = this
+                this.$ajax({
+                    method: "post",
+                    url: "api/search",
+                    data: {
+                        searchinfo: this.searchinfo
+                    }
+                }).then(function (response) {                    
+                })
+            },
             register: function(){
                 // this.$router.push({path: '/login'});
                 $('#regModal').modal('show');
@@ -219,7 +234,8 @@
                 }).then(function(response) {
 
                     if (response.data['code'] == 0) {
-                        self.thePost = response.data['post']
+                        self.thePost = response.data['post'];
+                        self.thePost['id'] = postID;
                         console.log(response.data['post'].title);
                         console.log(response.data['post'].content);
                         
@@ -280,22 +296,19 @@
                     // 插入成功
                     if (response.data['code'] == 0) {
                         newID = response.data['newPostID'];
+                        self.dataList.unshift({
+                            id: newID,
+                            title: self.theNewPost.title
+                        })
+                        
+                        console.log('newID is ' + newID);
+                        self.theNewPost.title = '';
+                        self.theNewPost.content = '';   
                     }
-                })
-
-                this.dataList.unshift({
-                    id: newID,
-                    title: this.theNewPost.title
-                })
-
-                console.log('newID' + newID + '\n' + 'newTitle' + 
-                    this.theNewPost.title);
-
-                this.theNewPost.title = '';
-                this.theNewPost.content = '';
-                
-                
-                
+                })                
+            },
+            closeLogin: function () {
+                $('#regModal').modal('hide');
             }
         },
         watch:{

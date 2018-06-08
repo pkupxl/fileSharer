@@ -10,6 +10,7 @@
             <div class="ui bottom attached buttons">
                 <div class="ui button" id="commentBtn">comment</div>
                 <div class="ui button">like</div>
+                <!-- <div class="ui right floated positive button" @click="collectPost">收藏</div> -->
             </div>
             <div class="ui custom popup bottom left transition hidden" id="insertComment">
                 <!-- <input type="text" name="" id=""> -->
@@ -65,6 +66,9 @@ export default {
                     self.commentContent = ''
                 }
             })
+        },
+        collectPost: function() {
+
         }
     },
     mounted() {

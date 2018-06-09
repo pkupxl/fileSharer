@@ -100,12 +100,12 @@
             <div class="ui fluid card">
                 <div class="content">
                     <div class="ui form">
-                        <div class="inline fields">
-                            <div class="eight wide field">
+                        <div class="fluid inline fields">
+                            <div class="fluid inline field">
                                 <label>专业</label>
-                                <div class="ui search selection dropdown" id="majorDropdown">
+                                <div class="ui float search selection dropdown" id="majorDropdown">
                                     <!-- <option value=""></option> -->
-                                    <input type="hidden">
+                                    <input type="text" v-model="selectedMajor">
                                     
                                     <i class="dropdown icon"></i>
                                     <div class="default text">搜索专业</div>
@@ -114,21 +114,21 @@
                                     </div>
                                 </div>
                             </div>
-                            <div class="eight wide field">
+                            <div class="fluid inline field">
                                 <label>课程</label>
-                                <div class="ui search selection dropdown" id="courseDropdown">
+                                <div class="ui float search selection dropdown" id="courseDropdown">
                                     <input type="hidden" name="kc">
                                     <i class="dropdown icon"></i>
                                     <div class="default text">搜索课程名</div>
                                     <div class="menu">
-                                        <div class="item" data-value="gs">高数</div>
-                                        <div class="item" data-value="sf">算分</div>
+                                        <div class="item" v-for="course in courseList" :key="course" >{{course}}</div>
+                                        
                                     </div>
                                 </div>
                             </div>
-                            <div class="two wide field">
+                            <div class="right floated inline field">
                                 <!-- <label></label> -->
-                                <div class="ui button">筛选</div>
+                                <div class="ui right floated button" @click="getFileListByKeys">筛选</div>
                             </div>
                         
                         </div>
@@ -137,7 +137,7 @@
             </div>
             <div class="ui fluid card" style="cursor: pointer;" v-for="it in fileList" :key="it.id" @click="showFile(it.id)">
                 <div class="content">
-                    <h3>{{it.title}}</h3>
+                    <div style="float: left;"><h3>{{it.title}}</h3> </div>
                     <div class="ui right floated positive button" @click="downloadFile">下载</div>
                 </div>
             </div>
@@ -210,6 +210,8 @@
                 dataList: [],
                 fileList: [],
                 majorList: [],
+                courseList: [],
+                selectedMajor: '',
                 mainList: "",
                 singlePost: "display: none;",
                 singleFile: "display: none;",
@@ -352,6 +354,42 @@
             downloadFile: function () {
                 
             },
+            getFileListByKeys: function() {
+
+                // console.log($('#majorDropdown').dropdown('get text'));
+                var self = this
+                this.$ajax({
+                    url: 'api/getFileListBykeys',
+                    method: 'post',
+                    data: {
+                        major: $('#majorDropdown').dropdown('get text'),
+                        course: $('#courseDropdown').dropdown('get text')
+                    },
+                    timeout: 3000
+                }).then(function(response) {
+                    
+                })
+            },
+            selectMajor: function() {
+                var self = this
+                console.log($('#majorDropdown').dropdown('get text'));
+                
+                this.$ajax({
+                    method: 'post',
+                    url: 'api/getCourse',
+                    data: {
+                        major: $('#majorDropdown').dropdown('get text')
+                    },
+                    timeout: 3000
+                }).then(function(response) {
+                    if (response.data['code'] === 0) {
+                        self.courseList = [].concat(response.data['courselist'])
+                    } else {
+                        console.log('get course code error');
+                        
+                    }
+                })
+            },
             activeBBS: function(){
                 this.bbsPageItem = "item active";
                 this.filePageItem = "item";
@@ -451,6 +489,10 @@
                 $('#username').popup('destroy')
                 
             },
+            selectedMajor: function () {
+                console.log(this.selectedMajor);
+                
+            }
             // password: function() {
             //     if (this.password.length < 8) {
             //         this.passwordError = "密码长度应不小于8"
@@ -478,7 +520,9 @@
             }
             $('.ui.dropdown.item').dropdown();
             $('#courseDropdown').dropdown();
-            $('#majorDropdown').dropdown();
+            $('#majorDropdown').dropdown({
+                onChange: this.selectMajor
+            });
 
             // this.dataList = new Array(20);
             // for (var i = 0;i < 20;++i) {
@@ -525,7 +569,9 @@
                 timeout: 3000
             }).then(function(response) {
                 if (response.data['code'] === 0) {
-                    self.majorList = [].concat(response.data['majorList'])
+                    self.majorList = [].concat(response.data['majorlist'])
+                    console.log('major list length ' + self.majorList.length);
+                    
                 } else {
                     console.log('getMajor code error');
                     

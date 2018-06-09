@@ -117,17 +117,29 @@ receive: {
     code: 0     // 0代表success
 }
 
-// name: /searchCourse    
-// 提供专业信息和关键词，实时返回搜索到的课程标题
+// name: /getCourse    
+// 提供专业信息，实时返回搜索到的课程名
 send: {
-    major: '',
-    key: ''
+    major: ''
 }
 
 receive: {
     courselist: [],      // 一个数组
     code: 0
 }
+
+
+// name: /getFileListByKeys
+
+send: {
+    major: '',
+    course: ''
+}
+receive: {
+    fileList: [],
+    code: 0
+}
+
 
 
 // // name: /getFileByID

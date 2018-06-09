@@ -94,35 +94,71 @@ receive: {
     id: n // comment id in this post
 }
 
-// name: /getFileByID
+// name: /getFileList
 send: {
-    fileid: '',
+    idBegin: 0
 }
 
 receive: {
-    code: 0 // 0 for success 1 for error
-    title: '',
-    major: '',
-    course: '',
-    intr: '',
-    path: ''
+    fileList: {
+        id: n,
+        titile: '',
+        code: 0
+    }
 }
 
-// name: /searchFile
+// name: /getMajor      
+// 为下拉框提供专业信息
 send: {
-    major: '',
-    course: ''
 }
 
 receive: {
-    code: 0 // 0 for success 1 for error
-    fileDataList: [
-    {
-        id: x, 
-        title: '',
-        intr: '',
-        path: ''
-    },
-    //...
-    ]
+    majorlist: [],       // 一个数组
+    code: 0     // 0代表success
 }
+
+// name: /searchCourse    
+// 提供专业信息和关键词，实时返回搜索到的课程标题
+send: {
+    major: '',
+    key: ''
+}
+
+receive: {
+    courselist: [],      // 一个数组
+    code: 0
+}
+
+
+// // name: /getFileByID
+// send: {
+//     fileid: '',
+// }
+
+// receive: {
+//     code: 0 // 0 for success 1 for error
+//     title: '',
+//     major: '',
+//     course: '',
+//     intr: '',
+//     path: ''
+// }
+
+// // name: /searchFile
+// send: {
+//     major: '',
+//     course: ''
+// }
+
+// receive: {
+//     code: 0 // 0 for success 1 for error
+//     fileDataList: [
+//     {
+//         id: x, 
+//         title: '',
+//         intr: '',
+//         path: ''
+//     },
+//     //...
+//     ]
+// }

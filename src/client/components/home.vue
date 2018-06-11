@@ -136,7 +136,7 @@
             <div class="ui fluid card" v-for="it in fileList" :key="it.id">
                 <div class="content">
                     <div style="float: left;"><h3>{{it.title}}</h3> </div>
-                    <div class="ui right floated positive button" @click="downloadFile">下载</div>
+                    <div class="ui right floated positive button" @click="downloadFile(it.id)">下载</div>
                 </div>
             </div>
         </div>
@@ -147,9 +147,11 @@
             </div>
         </div>
 
-        <div class="ui modal" id="newFileModal">
+        <div class="ui modal" id="newFileModal" :hidden="setDisabled">
             <div class="content">
-                <uploadFileModal></uploadFileModal>
+                <uploadFileModal :btn-style="uploadBtnStyle" 
+                    v-on:changestyle="changestyle" 
+                    v-on:close="closeUpload"></uploadFileModal>
             </div>
         </div>
 
@@ -183,7 +185,17 @@
             
             <div class="actions">
                 <div class="ui black deny button">取消</div>
-                <div class="ui right floated positive button" @click="upNewPost">确认</div>
+                <div class="ui right floated primary button" @click="upNewPost">确认</div>
+            </div>
+
+            <div :style="newPostError">
+                <div class="ui divider"> </div>
+                <div class="ui negative message">
+                    <div class="ui header">
+                        {{postErrorMsg}}
+                    </div>
+                </div>
+            
             </div>
         </div>
     </div>
@@ -215,10 +227,13 @@
                 fileList: [],
                 majorList: [],
                 courseList: [],
+                uploadBtnStyle: "ui disabled fluid primary button",
                 selectedMajor: '',
+                newPostError: "display: none;",
                 mainList: "",
                 singlePost: "display: none;",
                 fileListStyle: "display: none",
+                postErrorMsg: '',
                 thePost: {
                     title: "",
                     content: ""
@@ -324,8 +339,23 @@
 
                 })
             },
-            downloadFile: function () {
-                
+            downloadFile: function (ID) {
+                // window.open('/a.txt');
+                var self = this
+                this.$ajax({
+                    method: 'post',
+                    url: 'api/getUrlByID',
+                    data: {
+                        id: ID
+                    },
+                    timeout: 3000
+                }).then(function(response) {
+                    if (response.data['code'] === 0) {
+                        console.log(response.data['url']);
+                        
+                        window.open(response.data['url'])
+                    }
+                })
             },
             newFile: function() {
                 $('#newFileModal').modal('show');
@@ -420,6 +450,18 @@
 
             },
             upNewPost: function () {
+                if (this.theNewPost.title === "") {
+                    this.postErrorMsg = "标题不能为空"
+                    this.newPostError = ""
+                    return;
+                }
+                if (this.theNewPost.content === "") {
+                    this.postErrorMsg = "内容不能为空"
+                    this.newPostError = ""
+                    return;
+                }
+                this.newPostError = 'display: none;'
+
                 var self = this
                 var newID;
                 this.$ajax({
@@ -441,13 +483,39 @@
                         })
                         
                         console.log('newID is ' + newID);
+
                         self.theNewPost.title = '';
                         self.theNewPost.content = '';   
+                        $('#newPostModal').modal('hide');
                     }
                 })                
             },
             closeLogin: function () {
                 $('#regModal').modal('hide');
+            },
+            closeUpload: function() {
+                $('#newFileModal').modal('hide');
+                // uploadBtnStyle = "ui disabled fluid primary button";
+                this.changestyle("ui disabled fluid primary button")
+                var self = this;
+                this.$ajax({
+                    url: 'api/getFileList',
+                    method: 'post',
+                    data: {
+                        idBegin: 0
+                    },
+                    timeout: 3000
+                }).then(function(response) {
+                    self.fileList = [].concat(response.data['fileList'])
+                })
+            },
+            changestyle: function(style) {
+                this.uploadBtnStyle = style;
+            },
+            setDisabled: function() {
+                console.log('on hidden');
+                
+                this.changestyle("ui disabled fluid primary button")
             }
         },
         watch:{
@@ -503,6 +571,9 @@
             $('#majorDropdown').dropdown({
                 onChange: this.selectMajor
             });
+            $('#newFileModal').modal({
+                onHidden: this.setDisabled
+            })
 
             // this.dataList = new Array(20);
             // for (var i = 0;i < 20;++i) {

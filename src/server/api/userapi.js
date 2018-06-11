@@ -1,7 +1,8 @@
 var express = require('express')
+var multiparty = require('multiparty')
+var fs = require("fs");
 
 var router = express.Router()
-
 
 
 /*
@@ -253,7 +254,8 @@ router.use('/getDataList', function (req, res) {
 	    if (err) throw err;
 	    console.log('数据库已连接');
 	    var dbo = db.db("filesharer");
-		dbo.collection("bbs").find({}, {limit: 20, skip:idBegin}).toArray(function(err, ress) {
+	    // {}, {limit: 20, skip:idBegin}
+		dbo.collection("bbs").find().toArray(function(err, ress) {
 			if (err) throw err;
 			for(var i=0;i<ress.length;++i){
 				var obj={"id":ress[i]["bbs_id"],"title":ress[i]["title"]};
@@ -315,18 +317,27 @@ router.use('/newPost', function (req, res) {
 	        myid = ress[0]['bbs_id']+1;
 	        insertobj = {"name": username, "bbs_id":Number(myid), "like":0, "date": datestring, "title":title, "content":content, "comment":[]};
 
-			res.json({
-				newPostID: myid,
-				code: 0
-			})
+	        if(title.length==0 || content.length==0){
+				res.json({
+					newPostID: myid,
+					code: 1
+				})
+	        }
+	        else{
+				res.json({
+					newPostID: myid,
+					code: 0
+				})
+
 	        // res['newPostID'] = myid;
 
-	    	dbo.collection("bbs").insertOne(insertobj, function(err, resss) {
-		        if (err) throw err;
-		        console.log("insertobj");
-		        console.log("新BBS插入成功");
-		        db.close();				// !!!!!!!!!!!!这个写在外面就一直 "MongoError: server instance pool was destroyed"
-		    });
+		    	dbo.collection("bbs").insertOne(insertobj, function(err, resss) {
+			        if (err) throw err;
+			        console.log("insertobj");
+			        console.log("新BBS插入成功");
+			        db.close();				// !!!!!!!!!!!!这个写在外面就一直 "MongoError: server instance pool was destroyed"
+			    });
+	    	}
 		});
 	});
 
@@ -411,7 +422,7 @@ router.use('/uploadComment', function (req, res) {
 			var returnobj = {}
 			var retcode = 1;
 
-			if(ress.length == 0){		// 找不到对应的帖子
+			if(ress.length==0 || content.length==0){		// 找不到对应的帖子
 				retcode = 1;
 			}
 			else{
@@ -452,7 +463,6 @@ router.use('/getMajor', function (req, res) {
 	var url = "mongodb://localhost:27017/filesharer";
 
 	var return_value;		// 0 for success, else 1
-
 	console.log("********************************* getMajor *********************************");
 
 	var insertobj={};		// 要插入的表项
@@ -526,7 +536,9 @@ router.use('/getFileList', function (req, res) {
 	        if (err) throw err;
 	        for(var i=0;i<ress.length;++i){
 	            var obj={"id":ress[i]["file_id"],"title":ress[i]["intro"], code: 0};
-	            data.push(obj);
+	            if(ress[i]["major"].length!=0 && ress[i]["intro"].length!=0 && ress[i]["course"].length!=0){
+	            	data.push(obj);
+	        	}
 	        }
 
 	        console.log(data);
@@ -626,7 +638,9 @@ router.use('/getFileListByKeys', function (req, res) {
 	            retcode = 0;
 	            for(var i=0;i<ress.length;i++){
 	            	var insertobj = {"id":ress[i]["file_id"], "title": ress[i]["intro"], code: 0}
-	                retarr.push(insertobj);
+	            	if(ress[i]["major"].length!=0 && ress[i]["intro"].length!=0 && ress[i]["course"].length!=0){		// 只显示非空文件
+	                	retarr.push(insertobj);
+	            	}
 	            }
 	            console.log("已查到课程的文件列表：");
 	            console.log(retarr);
@@ -644,33 +658,219 @@ router.use('/getFileListByKeys', function (req, res) {
 
 })
 
-var multiparty = require('multiparty')
-router.use('/test', function (req, res) {
+
+/*
+上传文件
+*/
+router.use('/uploadFile', function (req, res) {
 	// console.log(req.Payload);
 	// console.log(req['Content-Type']);
-	var form = new multiparty.Form();
-	console.log(__dirname);
-	form.encoding = 'utf-8'
-	form.uploadDir = __dirname + '/uploads'
+	console.log("********************************* uploadFile *********************************");
 
-	form.maxFileSize = 2 * 1024 * 1024
+	var MongoClient = require('mongodb').MongoClient;
+	var url = "mongodb://localhost:27017/filesharer";
 
-	form.parse(req, function(err, fields, files) {
-		if(err) {
-			console.log('错误');
-			console.log(err);
+	var return_value;		// 0 for success, else 1
+
+	// 连接数据库
+	MongoClient.connect(url, function (err, db) {
+	    if (err) throw err;
+	    console.log('数据库已连接');
+	    var dbo = db.db("filesharer");
+
+
+		dbo.collection("studydata").find().toArray(function(err, ress) {
+			var now_id = ress.length;		// 当前文件的ID
+	        if (err) throw err;
+	        var retcode = 0;
+
+			var form = new multiparty.Form();
+			//console.log(__dirname);
+			form.encoding = 'utf-8'
+			form.uploadDir = __dirname + '/uploads';
+
+			form.maxFileSize = 100 * 1024 * 1024
+
+			form.parse(req, function(err, fields, files) {
+				if(err) {
+					console.log('错误');
+					console.log(err);
+					return;
+				}
+
+				/*
+				修改文件名
+				*/
+				var oldpath = files['file'][0]['path'];		// 下载下来的文件名
+				var split_res = oldpath.split('/');		// 按照斜杠分隔
+				var split_len = split_res.length;
+				var file_old_name = files['file'][0]['originalFilename']		// 旧文件名
+				var file_new_name = now_id.toString() + '_' + file_old_name;		// 新的文件名：编号+旧文件名
+				var newpath = form.uploadDir + '/' + file_new_name;		// 新的文件路径
+				fs.renameSync(oldpath, newpath);
+				console.log(files);
+
+				// 插入这条信息
+				var insertobj = { "file_id" : now_id, "course" : "", "major" : "", "filename" : file_new_name, "intro" : "", "path" : newpath }
+		    	dbo.collection("studydata").insertOne(insertobj, function(err, resss) {
+			        if (err) throw err;
+			        console.log("新文件信息插入成功");
+			        res.json({
+				    	code: retcode,// 0 for success, 1 for error
+				    	id: now_id
+					})
+			        db.close();				// !!!!!!!!!!!!这个写在外面就一直 "MongoError: server instance pool was destroyed"
+			    });
 			
-			return;
-		}
+			})
+		});		
+	});	
+})
 
-		console.log(files['txt'].originalFilename);
-		
-		
-	})
-	
-	
-	
-	
+/*
+修改文件信息
+*/
+router.use('/updataFileInfo', function (req, res) {
+	var MongoClient = require('mongodb').MongoClient;
+	var url = "mongodb://localhost:27017/filesharer";
+
+	var retcode = 1;		// 0 for success, else 1
+	var id = Number(req.body.id);
+	var title = req.body.title;
+	var major = req.body.major;
+	var course = req.body.course;
+
+	console.log("********************************* updateFileInfo *********************************");
+
+	// 连接数据库
+	MongoClient.connect(url, function (err, db) {
+	    if (err) throw err;
+	    console.log('数据库已连接');
+	    var dbo = db.db("filesharer");
+
+	    // 根据 id 找到相关的文件
+		dbo.collection("studydata").find({"file_id":id}).toArray(function(err, ress) {
+			if (err) throw err;
+
+			if(ress.length==0 || title.length==0 || major.length==0 || course.length==0){		// 找不到对应的帖子
+				retcode = 1;
+			}
+			else{
+				retcode = 0;
+				console.log('已找到对应文件的信息');			
+
+				// 修改文件信息
+				var updateStr = {$set: {"course":course, "major":major, "intro":title}};
+			    dbo.collection("studydata").updateOne({"file_id": id}, updateStr, function(err, res) {
+			        if (err) throw err;
+			        console.log("文件信息更新成功");
+			        db.close();
+			    });
+
+			}
+
+			res.json({
+		    	code: retcode,// 0 for success, 1 for error
+			    id: id
+			})
+		});		
+
+	});
+
+})
+
+/*
+根据ID返回文件的路径
+*/
+router.use('/getUrlByID', function (req, res) {
+	var MongoClient = require('mongodb').MongoClient;
+	var url = "mongodb://localhost:27017/filesharer";
+
+	var retcode = 1;		// 0 for success, else 1
+	var id = Number(req.body.id);
+
+	console.log("********************************* getUrlByID *********************************");
+
+	// 连接数据库
+	MongoClient.connect(url, function (err, db) {
+	    if (err) throw err;
+	    console.log('数据库已连接');
+	    var dbo = db.db("filesharer");
+
+	    // 根据 id 找到相关的文件
+		dbo.collection("studydata").find({"file_id":id}).toArray(function(err, ress) {
+			if (err) throw err;
+
+			if(ress.length == 0){		// 找不到对应的帖子
+				retcode = 1;
+			}
+			else{
+				retcode = 0;
+				console.log('已找到对应文件的信息');	
+				var split_res = ress[0]['path'].split('/');		
+
+				// 修改文件信息
+				res.json({
+			    	code: retcode,// 0 for success, 1 for error
+				    url: split_res[split_res.length-1]
+				})
+			    db.close();
+
+			}
+		});		
+
+	});
+
+})
+
+/*
+修改点赞数
+*/
+router.use('/updateLikes', function (req, res) {
+	var MongoClient = require('mongodb').MongoClient;
+	var url = "mongodb://localhost:27017/filesharer";
+
+	var postid = Number(req.body.id);
+
+	console.log("********************************* updateLikes *********************************");
+	console.log("GET a postID : " + postid);
+
+	// 连接数据库
+	MongoClient.connect(url, function (err, db) {
+	    if (err) throw err;
+	    console.log('数据库已连接');
+	    var dbo = db.db("filesharer");
+
+	    // 根据postid找到相关的帖子
+		dbo.collection("bbs").find({bbs_id:postid}).toArray(function(err, ress) {
+			if (err) throw err;
+			var retcode = 1;
+
+			if(ress.length == 0){		// 找不到对应的帖子
+				retcode = 1;
+			}
+			else{
+				console.log('已找到对应帖子');		
+
+				// 更新帖子
+				var now_like = ress[0]["like"] + 1;
+				var updateStr = {$set: { "like" : now_like }};
+			    dbo.collection("bbs").updateOne({"bbs_id": postid}, updateStr, function(err, res) {
+			        if (err) throw err;
+			        console.log("点赞信息更新成功");
+			        db.close();
+			    });
+
+				retcode = 0;
+			}
+
+			res.json({
+		    	code: retcode// 0 for success, 1 for error
+			})
+		});		
+
+	});
+
 })
 
 module.exports = router

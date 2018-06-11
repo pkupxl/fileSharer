@@ -142,17 +142,45 @@ receive: {
 
 
 //name: /uploadFile
-
 send: {
-    title: '',
-    major: '',
-    course: '',
     file: ''// 二进制文件
 }
 
 receive: {
     code: 0
     id: 0
+}
+
+//name: updateFileInfo
+send: {
+    id: 0,
+    title: '',
+    major: '',
+    course: ''
+}
+
+receive: {
+    code: 0
+    id: 0
+}
+
+//name: getUrlByID
+send: {
+    id: 0
+}
+
+receive: {
+    code: 0,
+    url: ''
+}
+
+//name: updateLikes
+send: {
+    id: 0
+}
+
+receive: {
+    code: 0
 }
 
 // // name: /getFileByID

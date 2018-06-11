@@ -8,8 +8,15 @@
                 <p>{{ value.content }}</p>
             </div>
             <div class="ui bottom attached buttons">
-                <div class="ui button" id="commentBtn">comment</div>
-                <div class="ui button">like</div>
+                <div class="ui button" id="commentBtn">
+                    <i class="ui comment icon"></i>
+                    comment
+                </div>
+                <div class="ui button" @click="updateLike">
+                    <i :class="likeIcon"></i>
+                    like
+                    {{value.like}}
+                </div>
                 <!-- <div class="ui right floated positive button" @click="collectPost">收藏</div> -->
             </div>
             <div class="ui custom popup bottom left transition hidden" id="insertComment">
@@ -36,7 +43,8 @@ export default {
     props: ['value', 'getUsername'],
     data() {
         return {
-            commentContent: ''
+            commentContent: '',
+            likeIcon: 'ui like icon'
         }
     },
     methods: {
@@ -45,6 +53,9 @@ export default {
             //     popup: $('#insertComment'),
             //     on : 'click'
             // })
+            if (this.commentContent === '') {
+                return;
+            }
             $('#commentBtn').popup('hide')
             var self = this
             this.$ajax({
@@ -67,8 +78,29 @@ export default {
                 }
             })
         },
-        collectPost: function() {
-
+        updateLike: function() {
+            var self = this
+            // this.value.like += 1
+            this.$ajax({
+                method: 'post',
+                url: 'api/updateLikes',
+                data: {
+                    id: this.value.id
+                }
+            }).then(function(response) {
+                if (response.data['code'] === 0) {
+                    self.likeIcon = 'ui red like icon'
+                    self.value.like += 1
+                } else {
+                    console.log('update likes code error');
+                    
+                }
+            })
+        }
+    },
+    watch: {
+        "value.id" : function () {
+            this.likeIcon = "ui like icon"
         }
     },
     mounted() {
@@ -76,6 +108,7 @@ export default {
                 popup: $('#insertComment'),
                 on : 'click'
         })
+        this.likeIcon = 'ui like icon'
     }
 }
 </script>
